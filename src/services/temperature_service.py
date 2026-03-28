@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from decimal import Decimal
 from typing import Sequence
 
 import aiohttp
@@ -24,7 +26,16 @@ async def update_weather(cities: Sequence[models.City]) -> dict:
         ]
         responses = await asyncio.gather(*tasks)
 
-    return {item["name"]: item["main"]["temp"] for item in responses}
+    data = {}
+
+    for response in responses:
+        try:
+            name = response.get("name")
+            data[name] = response["main"]["temp"]
+        except KeyError as e:
+            print('I got a KeyError - reason "%s"' % str(e))
+
+    return data
 
 
 async def update_temperature_records(db: AsyncSession):
@@ -44,18 +55,16 @@ async def update_temperature_records(db: AsyncSession):
     for city in cities:
         response_city_temperature = current_temperature_records.get(city.name)
         if response_city_temperature is None:
-            print(
-                f"City {city.name} is not valid or doesn't have any temperature record"
-            )
+            logging.warning(f"City {city.name} is not valid or doesn't have any temperature record")
             continue
         city_temperature_records = city.temperatures
         last_record = city_temperature_records[0] if city_temperature_records else None
 
-        new_temperature = "%.2f" % response_city_temperature
+        new_temperature = Decimal("%.2f" % response_city_temperature)
         old_temperature = None
 
         if last_record is not None:
-            old_temperature = "%.2f" % last_record.temperature
+            old_temperature = Decimal("%.2f" % last_record.temperature)
 
         if (
                 old_temperature
