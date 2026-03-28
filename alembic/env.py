@@ -9,6 +9,7 @@ from alembic import context
 
 from src.core.config import DATABASE_URL
 from src.models.city import *
+from src.models.temperature import *
 from src.db.database import Base
 
 # this is the Alembic Config object, which provides

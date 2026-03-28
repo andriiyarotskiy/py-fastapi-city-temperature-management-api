@@ -17,8 +17,8 @@ async def create_city(payload: CityCreate, db: DBSessionDep):
 
 @router.get("/", response_model=list[CityRead])
 async def get_cities(db: DBSessionDep):
-    city = await city_service.get_cities(db=db)
-    return city
+    cities = await city_service.get_cities(db=db)
+    return cities
 
 
 @router.get("/{city_id}", response_model=CityRead)

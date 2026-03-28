@@ -30,7 +30,7 @@ async def update_city(city_id, payload: CityUpdate, db: AsyncSession) -> City | 
     if not city:
         return None
 
-    city_data = payload.model_dump()
+    city_data = payload.model_dump(exclude_unset=True)
     for key, value in city_data.items():
         setattr(city, key, value)
     await db.commit()
