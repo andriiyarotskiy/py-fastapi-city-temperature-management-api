@@ -14,8 +14,8 @@ from src.core.config import WEATHER_API_KEY
 
 async def make_request(client: aiohttp.ClientSession, name: str) -> dict:
     url = f"https://api.openweathermap.org/data/2.5/weather?q={name}&units=metric&appid={WEATHER_API_KEY}"
-
     async with client.get(url) as resp:
+        resp.raise_for_status()
         return await resp.json()
 
 
@@ -24,16 +24,19 @@ async def update_weather(cities: Sequence[models.City]) -> dict:
         tasks = [
             asyncio.create_task(make_request(client, city.name)) for city in cities
         ]
-        responses = await asyncio.gather(*tasks)
+        responses = await asyncio.gather(*tasks, return_exceptions=True)
 
     data = {}
 
     for response in responses:
+        if isinstance(response, Exception):
+            logging.warning(f"Exception while fetching weather data: {response}")
+            continue
         try:
             name = response.get("name")
             data[name] = response["main"]["temp"]
         except KeyError as e:
-            print('I got a KeyError - reason "%s"' % str(e))
+            print(f'I got a KeyError - reason key: {e} does not exist')
 
     return data
 
@@ -60,11 +63,11 @@ async def update_temperature_records(db: AsyncSession):
         city_temperature_records = city.temperatures
         last_record = city_temperature_records[0] if city_temperature_records else None
 
-        new_temperature = Decimal("%.2f" % response_city_temperature)
+        new_temperature = Decimal(str(response_city_temperature))
         old_temperature = None
 
         if last_record is not None:
-            old_temperature = Decimal("%.2f" % last_record.temperature)
+            old_temperature = last_record.temperature
 
         if (
                 old_temperature
